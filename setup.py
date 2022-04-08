@@ -29,6 +29,6 @@ setup(
     py_modules=["create"],
     entry_points="""
         [console_scripts]
-        venvman=venvman.manager:cli
+        venvman=venvman.manager:create_envs
     """,
 )

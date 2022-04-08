@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 from virtualenvapi.manage import VirtualEnvironment
 
