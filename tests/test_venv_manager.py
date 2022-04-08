@@ -1,5 +1,5 @@
 import os
-import tempfile
+import shutil
 
 from virtualenvapi.manage import VirtualEnvironment
 
@@ -7,19 +7,41 @@ from venvman import manager
 
 
 class TestVenvManager:
-    def test_create_users(self, data_fixtures, runner):
-        temp_dir = tempfile.gettempdir()
-        venv_dirs = os.path.join(temp_dir, "venvs")
-        os.makedirs(venv_dirs, exist_ok=True)
-
-        result = runner.invoke(
-            manager.create_users, [str(data_fixtures / "envs.yml"), venv_dirs]
-        )
+    def test_create_envs(self, tmp_path, yaml_config, runner):
+        tmp_path = str(tmp_path)
+        result = runner.invoke(manager.create_envs, [yaml_config, tmp_path])
         assert result.exit_code == 0
-        assert result.output == "Created envs ['Kyle', 'Sally']\n"
+        assert (
+            result.output
+            == "Creating env Kyle\nInstalling package numpy\nInstalling package"
+            " pandas\nCreating env Sally\nInstalling package numpy\nInstalling"
+            " package requests\nCreated envs ['Kyle', 'Sally']\n"
+        )
 
-        assert sorted(os.listdir(venv_dirs)) == sorted(["Kyle", "Sally"])
-        user_env = VirtualEnvironment(os.path.join(venv_dirs, "Kyle"))
+        assert sorted(os.listdir(tmp_path)) == sorted(["Kyle", "Sally"])
+        user_env = VirtualEnvironment(os.path.join(tmp_path, "Kyle"))
         assert user_env.is_installed("pandas")
-        user_env = VirtualEnvironment(os.path.join(venv_dirs, "Sally"))
+        user_env = VirtualEnvironment(os.path.join(tmp_path, "Sally"))
         assert user_env.is_installed("requests")
+
+    def test_create_env_current_dir(self, yaml_config, runner):
+        result = runner.invoke(manager.create_envs, [yaml_config])
+        assert result.exit_code == 0
+
+        assert os.path.isdir("Kyle")
+        assert os.path.isdir("Sally")
+        shutil.rmtree("Kyle")
+        shutil.rmtree("Sally")
+
+    def test_create_env_dir_copy_dir(
+        self, tmp_path, yaml_config, runner, data_fixtures
+    ):
+        manager.create_dirs(
+            yaml_config,
+            str(tmp_path / "dest_dir"),
+            str(data_fixtures / "test_copy_dir"),
+        )
+        assert sorted(os.listdir(str(tmp_path / "dest_dir"))) == sorted(
+            ["Kyle", "Sally"]
+        )
+        assert os.listdir(str(tmp_path / "dest_dir" / "Kyle")) == ["test_file.txt"]
