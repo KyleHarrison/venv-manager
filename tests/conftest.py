@@ -11,6 +11,12 @@ def data_fixtures():
 
 
 @pytest.fixture()
+def yaml_config():
+    """Load a data fixture."""
+    return str(pathlib.Path(__file__).parent / "test_data" / "envs.yml")
+
+
+@pytest.fixture()
 def runner():
     """Load a data fixture."""
     return CliRunner()
