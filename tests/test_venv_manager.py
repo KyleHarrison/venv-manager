@@ -18,7 +18,7 @@ class TestVenvManager:
         assert result.exit_code == 0
         assert result.output == "Created envs ['Kyle', 'Sally']\n"
 
-        assert os.listdir(venv_dirs) == ["Kyle", "Sally"]
+        assert sorted(os.listdir(venv_dirs)) == sorted(["Kyle", "Sally"])
         user_env = VirtualEnvironment(os.path.join(venv_dirs, "Kyle"))
         assert user_env.is_installed("pandas")
         user_env = VirtualEnvironment(os.path.join(venv_dirs, "Sally"))
