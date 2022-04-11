@@ -61,7 +61,9 @@ def create_envs(cfg: VenvManager, directory: str):
 @click.option(
     "--dst",
     default=".",
-    help="Directory for creating environment directories. Defaults to current directory.",
+    help=(
+        "Directory for creating environment directories. Defaults to current directory."
+    ),
 )
 @click.option(
     "--src",
