@@ -1,0 +1,10 @@
+default:
+  - numpy
+
+envs:
+  Kyle:
+  - pandas
+
+  Sally:
+  - requests
+  
