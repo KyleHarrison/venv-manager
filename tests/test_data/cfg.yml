@@ -3,6 +3,7 @@ projects_directory: tests/test_data/projects
 
 default_packages:
   - numpy
+  
 environments:
   Kyle:
   - pandas

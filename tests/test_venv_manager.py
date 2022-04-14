@@ -27,7 +27,7 @@ class CLIHelper:
         d.update(kw)
         return d
 
-    def cfg(self, config_name="ml2p.yml", **kw):
+    def cfg(self, config_name="cfg.yml", **kw):
         cfg_file = self._tmp_path / config_name
         cfg_file.write_text(json.dumps(self._apply_base_cfg(**kw)))
         return str(cfg_file)
