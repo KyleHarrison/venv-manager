@@ -1,9 +1,13 @@
-default:
-  - numpy
+environments_directory: tests/test_data/envs
+projects_directory: tests/test_data/projects
 
-envs:
+default_packages:
+  - numpy
+  
+environments:
   Kyle:
   - pandas
 
   Sally:
   - requests
+  
