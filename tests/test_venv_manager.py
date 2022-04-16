@@ -67,7 +67,7 @@ class TestVenvManager:
     def test_create_venvman(self, data_fixtures):
         config = cli.VenvManager(data_fixtures / "cfg.yml")
         assert config.default_packages == ["numpy"]
-        assert config.environments == {"Kyle": ["pandas"], "Sally": ["requests"]}
+        assert config.envs_cfg == {"Kyle": ["pandas"], "Sally": ["requests"]}
         assert config.envs_dir == Path("tests/test_data/envs")
         assert config.projs_dir == Path("tests/test_data/projects")
 
@@ -88,7 +88,8 @@ class TestHelp:
             "  --help      Show this message and exit.",
             "",
             "Commands:",
-            "  create  Create and manage datasets.",
+            "  create   Create and manage datasets.",
+            "  install  Installs one or more packages in each environment.",
         ]
 
 
@@ -110,6 +111,7 @@ class TestCreate:
         assert sorted(os.listdir(cli_helper.ctx.envs_dir)) == sorted(["Kyle", "Sally"])
         user_env = VirtualEnvironment(str(cli_helper.ctx.envs_dir / "Kyle"))
         assert user_env.is_installed("pandas")
+        assert cli_helper.ctx.envs["Kyle"].is_installed("pandas")
         user_env = VirtualEnvironment(str(cli_helper.ctx.envs_dir / "Sally"))
         assert user_env.is_installed("requests")
 
@@ -150,3 +152,22 @@ class TestCreate:
         ]
         assert sorted(os.listdir(cli_helper.ctx.projs_dir)) == sorted(["Kyle", "Sally"])
         assert os.listdir(str(cli_helper.ctx.projs_dir / "Kyle")) == ["test_file.txt"]
+
+
+class TestInstall:
+    def create_dirs(self, envs):
+        for env in envs.values():
+            Path(env.path).mkdir(parents=True)
+
+    def test_install_pkg(self, cli_helper):
+        self.create_dirs(cli_helper.ctx.envs)
+        output = cli_helper.invoke(["install", "eli5"])
+        assert output == ["Installing ['eli5'] in Kyle", "Installing ['eli5'] in Sally"]
+
+    def test_install_pkgs(self, cli_helper):
+        self.create_dirs(cli_helper.ctx.envs)
+        output = cli_helper.invoke(["install", "flake8", "black"])
+        assert output == [
+            "Installing ['flake8', 'black'] in Kyle",
+            "Installing ['flake8', 'black'] in Sally",
+        ]

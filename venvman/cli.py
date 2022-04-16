@@ -15,7 +15,14 @@ class VenvManager:
         self.envs_dir = Path(config["environments_directory"])
         self.projs_dir = Path(config["projects_directory"])
         self.default_packages = config["default_packages"]
-        self.environments = config["environments"]
+        self.envs_cfg = config["environments"]
+        self.envs = self.init_envs()
+
+    def init_envs(self):
+        envs = {}
+        for env_name in self.envs_cfg:
+            envs[env_name] = VirtualEnvironment(str(self.envs_dir / env_name))
+        return envs
 
 
 # alias pass_obj for readability
@@ -45,15 +52,14 @@ def create():
 @pass_cfg
 def create_envs(cfg: VenvManager):
     """Creates a virtualenv for each environment specified in the yaml config file."""
-    for env_name, packages in cfg.environments.items():
+    for env_name, pkgs in cfg.envs_cfg.items():
         click.echo(f"Creating env {env_name}")
-        env_dir = cfg.envs_dir / env_name
-        env_dir.mkdir(parents=True)
-        env = VirtualEnvironment(str(env_dir))
-        for package in cfg.default_packages + packages:
-            click.echo(f"Installing package {package}")
-            env.install(package)
-    click.echo(f"Created envs {list(cfg.environments.keys())}")
+        env = cfg.envs[env_name]
+        Path(env.path).mkdir(parents=True)
+        for pkg in cfg.default_packages + pkgs:
+            click.echo(f"Installing package {pkg}")
+            env.install(pkg)
+    click.echo(f"Created envs {list(cfg.envs_cfg)}")
 
 
 @create.command("dirs")
@@ -68,7 +74,7 @@ def create_dirs(cfg: VenvManager, src: Path):
     """Creates a directory for each environment. Each directories contents is a copy of
     'src'.
     """
-    for env_name in cfg.environments:
+    for env_name in cfg.envs_cfg:
         click.echo(f"Creating dir for {env_name}")
         dest_subdir = Path(cfg.projs_dir / env_name)
         if dest_subdir.is_dir():
@@ -81,3 +87,15 @@ def create_dirs(cfg: VenvManager, src: Path):
                     shutil.copytree(src, dest_subdir, dirs_exist_ok=True)
                 else:
                     shutil.copyfile(src, dest_subdir / src.name)
+
+
+@venvman.command("install")
+@click.argument("pkgs", nargs=-1)
+@pass_cfg
+def create_envs(cfg: VenvManager, pkgs: str):
+    """Installs one or more packages in each environment."""
+    for env_name in cfg.envs_cfg:
+        env = cfg.envs[env_name]
+        click.echo(f"Installing {list(pkgs)} in {env_name}")
+        for pkg in pkgs:
+            env.install(pkg)
