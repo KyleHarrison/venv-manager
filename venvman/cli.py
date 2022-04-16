@@ -92,7 +92,7 @@ def create_dirs(cfg: VenvManager, src: Path):
 @venvman.command("install")
 @click.argument("pkgs", nargs=-1)
 @pass_cfg
-def create_envs(cfg: VenvManager, pkgs: str):
+def install_pkgs(cfg: VenvManager, pkgs: str):
     """Installs one or more packages in each environment."""
     for env_name in cfg.envs_cfg:
         env = cfg.envs[env_name]
