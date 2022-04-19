@@ -12,10 +12,18 @@ class VenvManager:
     def __init__(self, cfg):
         with open(cfg, "r") as f:
             config = yaml.safe_load(f)
-        self.envs_dir = Path(config["environments_directory"])
-        self.projs_dir = Path(config["projects_directory"])
-        self.default_packages = config["default_packages"]
-        self.envs_cfg = config["environments"]
+        self.envs_dir = (
+            Path(config["environments_directory"])
+            if "environments_directory" in config
+            else Path(".")
+        )
+        self.projs_dir = (
+            Path(config["projects_directory"])
+            if "projects_directory" in config
+            else Path(".")
+        )
+        self.default_packages = config.get("default_packages")
+        self.envs_cfg = config.get("environments")
         self.envs = self.init_envs()
 
     def init_envs(self):
@@ -99,3 +107,15 @@ def install_pkgs(cfg: VenvManager, pkgs: str):
         click.echo(f"Installing {list(pkgs)} in {env_name}")
         for pkg in pkgs:
             env.install(pkg)
+
+
+@venvman.command("upgrade")
+@click.argument("pkgs", nargs=-1)
+@pass_cfg
+def upgrade_pkgs(cfg: VenvManager, pkgs: str):
+    """Upgrade one or more packages in each environment."""
+    for env_name in cfg.envs_cfg:
+        env = cfg.envs[env_name]
+        click.echo(f"Upgrading {list(pkgs)} in {env_name}")
+        for pkg in pkgs:
+            env.upgrade(pkg)

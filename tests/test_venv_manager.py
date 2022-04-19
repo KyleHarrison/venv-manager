@@ -73,7 +73,7 @@ class TestVenvManager:
 
 
 class TestHelp:
-    def test_help_command(self, cli_helper):
+    def test_help_command(self, cli_helper: CLIHelper):
         output = cli_helper.invoke(
             ["--help"],
         )
@@ -90,11 +90,12 @@ class TestHelp:
             "Commands:",
             "  create   Create and manage datasets.",
             "  install  Installs one or more packages in each environment.",
+            "  upgrade  Upgrade one or more packages in each environment.",
         ]
 
 
 class TestCreate:
-    def test_create_envs(self, cli_helper, tmp_path):
+    def test_create_envs(self, cli_helper: CLIHelper, tmp_path):
         tmp_path = str(tmp_path)
         output = cli_helper.invoke(
             ["create", "envs"],
@@ -115,7 +116,7 @@ class TestCreate:
         user_env = VirtualEnvironment(str(cli_helper.ctx.envs_dir / "Sally"))
         assert user_env.is_installed("requests")
 
-    def test_create_env_dir_copy_dir(self, cli_helper, data_fixtures):
+    def test_create_env_dir_copy_dir(self, cli_helper: CLIHelper, data_fixtures):
         output = cli_helper.invoke(
             [
                 "create",
@@ -156,18 +157,41 @@ class TestCreate:
 
 class TestInstall:
     def create_dirs(self, envs):
+        """Envs have not been created, create dirs so they can be init."""
         for env in envs.values():
             Path(env.path).mkdir(parents=True)
 
-    def test_install_pkg(self, cli_helper):
+    def test_install_pkg(self, cli_helper: CLIHelper):
         self.create_dirs(cli_helper.ctx.envs)
         output = cli_helper.invoke(["install", "eli5"])
         assert output == ["Installing ['eli5'] in Kyle", "Installing ['eli5'] in Sally"]
 
-    def test_install_pkgs(self, cli_helper):
+    def test_install_pkgs(self, cli_helper: CLIHelper):
         self.create_dirs(cli_helper.ctx.envs)
         output = cli_helper.invoke(["install", "flake8", "black"])
         assert output == [
             "Installing ['flake8', 'black'] in Kyle",
             "Installing ['flake8', 'black'] in Sally",
         ]
+
+
+class TestUpgrade:
+    def create_dirs(self, envs):
+        """Envs have not been created, create dirs so they can be init."""
+        for env in envs.values():
+            Path(env.path).mkdir(parents=True)
+
+    def test_upgrade_pkg(self, cli_helper: CLIHelper):
+        self.create_dirs(cli_helper.ctx.envs)
+        output = cli_helper.invoke(
+            ["upgrade", "numpy"],
+            cfg={
+                "environments": {"Kyle": ["numpy==1.0.0"]},
+            },
+        )
+        assert output == ["Upgrading ['numpy'] in Kyle"]
+        assert [
+            ver
+            for pkg, ver in cli_helper.ctx.envs["Kyle"].installed_packages
+            if pkg == "numpy"
+        ] != ["1.0.0"]
