@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from typing import Dict
 
 import click
 import yaml
@@ -51,9 +52,12 @@ def venvman(ctx, cfg):
     ctx.obj = VenvManager(cfg=cfg)
 
 
+""" Create """
+
+
 @venvman.group("create")
 def create():
-    """Create and manage datasets."""
+    """Create environments and directories."""
 
 
 @create.command("envs")
@@ -88,13 +92,16 @@ def create_dirs(cfg: VenvManager, src: Path):
         if dest_subdir.is_dir():
             click.echo(f"Dir already exists for {env_name}, skipping")
         else:
-            click.echo(f"Copying {src.name} to {dest_subdir.name}")
             dest_subdir.mkdir(parents=True)
             if src is not None:
+                click.echo(f"Copying {src.name} to {dest_subdir.name}")
                 if src.is_dir():
                     shutil.copytree(src, dest_subdir, dirs_exist_ok=True)
                 else:
                     shutil.copyfile(src, dest_subdir / src.name)
+
+
+""" Install """
 
 
 @venvman.command("install")
@@ -109,6 +116,9 @@ def install_pkgs(cfg: VenvManager, pkgs: str):
             env.install(pkg)
 
 
+""" Upgrade """
+
+
 @venvman.command("upgrade")
 @click.argument("pkgs", nargs=-1)
 @pass_cfg
@@ -119,3 +129,49 @@ def upgrade_pkgs(cfg: VenvManager, pkgs: str):
         click.echo(f"Upgrading {list(pkgs)} in {env_name}")
         for pkg in pkgs:
             env.upgrade(pkg)
+
+
+""" Clean """
+
+
+@venvman.group("clean")
+def clean():
+    """Remove envs and dirs missing from config."""
+
+
+def find_missing_dirs(dir_src: Dict, dir_dst: Path):
+    """Finds directories in the destination 'dir_dst' whos names are missing from the
+    source 'dir_src'.
+
+    :param list dir_src:
+        A list of directory names which should be in the destination.
+    :param pathlib.Path dir_dst:
+        The Path to the directory which should contain each item from src.
+    """
+    missing = []
+    for dir in dir_dst.iterdir():
+        if dir.name not in dir_src:
+            missing.append(dir)
+    return missing
+
+
+@clean.command("envs")
+@pass_cfg
+def clean_envs(cfg: VenvManager):
+    """Remove folders in the envs dir which are no longer in the config."""
+    missing = find_missing_dirs(cfg.envs_cfg, cfg.envs_dir)
+    if click.confirm(
+        f"Are you sure you want to remove envs {missing} missing from config?"
+    ):
+        [shutil.rmtree(dir) for dir in missing]
+
+
+@clean.command("prjs")
+@pass_cfg
+def clean_dirs(cfg: VenvManager):
+    """Remove folders in the prjs dir which are no longer in the config."""
+    missing = find_missing_dirs(cfg.envs_cfg, cfg.projs_dir)
+    if click.confirm(
+        f"Are you sure you want to remove project dirs {missing} missing from config?"
+    ):
+        [shutil.rmtree(dir) for dir in missing]
