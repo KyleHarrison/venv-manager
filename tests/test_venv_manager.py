@@ -90,6 +90,7 @@ class TestHelp:
             "Commands:",
             "  create   Create and manage datasets.",
             "  install  Installs one or more packages in each environment.",
+            "  upgrade  Upgrade one or more packages in each environment.",
         ]
 
 
