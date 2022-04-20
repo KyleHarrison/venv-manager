@@ -57,7 +57,7 @@ def venvman(ctx, cfg):
 
 @venvman.group("create")
 def create():
-    """Create environments and directories."""
+    """Create environments, directories and jupyter kernels."""
 
 
 @create.command("envs")
@@ -76,7 +76,7 @@ def create_envs(cfg: VenvManager):
 
 @create.command("kernels")
 @pass_cfg
-def create_envs(cfg: VenvManager):
+def create_kernels(cfg: VenvManager):
     """Creates a jupyter kernel for each env."""
     for env_name, env in cfg.envs.items():
         click.echo(f"Creating jupyter kernel for {env_name}")
