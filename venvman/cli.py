@@ -74,6 +74,20 @@ def create_envs(cfg: VenvManager):
     click.echo(f"Created envs {list(cfg.envs_cfg)}")
 
 
+@create.command("kernels")
+@pass_cfg
+def create_envs(cfg: VenvManager):
+    """Creates a jupyter kernel for each env."""
+    for env_name, env in cfg.envs.items():
+        click.echo(f"Creating jupyter kernel for {env_name}")
+        if not env.is_installed("ipykernel"):
+            env.install("ipykernel")
+        python_bin = Path(cfg.envs[env_name].path) / "bin" / "python"
+        env._execute(
+            [str(python_bin), "-m", "ipykernel", "install", f"--name={env.name}"]
+        )
+
+
 @create.command("dirs")
 @click.option(
     "--src",

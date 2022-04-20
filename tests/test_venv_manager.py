@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import subprocess
 from pathlib import Path
 from unittest import mock
 
@@ -8,6 +10,8 @@ from click.testing import CliRunner
 from virtualenvapi.manage import VirtualEnvironment
 
 from venvman import cli
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture()
@@ -82,8 +86,8 @@ class TestVenvManager:
         config = cli.VenvManager(data_fixtures / "cfg.yml")
         assert config.default_packages == ["numpy"]
         assert config.envs_cfg == {"Kyle": ["pandas"], "Sally": ["requests"]}
-        assert config.envs_dir == Path("tests/test_data/envs")
-        assert config.projs_dir == Path("tests/test_data/projects")
+        assert config.envs_dir == Path("envs")
+        assert config.projs_dir == Path("projects")
 
 
 class TestHelp:
@@ -180,6 +184,44 @@ class TestCreate:
         ]
         assert cli_helper.list_prjs() == sorted(["Kyle", "Sally"])
         assert cli_helper.list_prjs("Kyle") == []
+
+    # @mock.patch("VirtualEnvironment.is_installed")
+    # @mock.patch("VirtualEnvironment._execute")
+    def test_create_kernel(self, monkeypatch, caplog, cli_helper: CLIHelper):
+        def mockexecute(*args, **kwargs):
+            logger.info(f"{args}")
+            return True
+
+        cli_helper.invoke(
+            ["create", "envs"],
+            cfg={
+                "environments": {"Kyle": ["ipykernel"]},
+            },
+        )
+        # mock_install.return_value = True
+        # mock_execute.return_value = True
+
+        monkeypatch.setattr(VirtualEnvironment, "_execute", mockexecute)
+        monkeypatch.setattr(VirtualEnvironment, "is_installed", mockexecute)
+        with caplog.at_level(logging.INFO):
+            output = cli_helper.invoke(
+                [
+                    "create",
+                    "kernels",
+                ],
+            )
+            assert caplog.record_tuples == [
+                (
+                    "capital_markets.loan_tape",
+                    logging.INFO,
+                    "Selecting 2 relevant loans (among 2 total loans in the loan tape).",
+                )
+            ]
+
+        assert output == [
+            "Creating dir for Kyle",
+            "Creating dir for Sally",
+        ]
 
 
 class TestInstall:
