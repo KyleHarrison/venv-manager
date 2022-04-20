@@ -193,8 +193,6 @@ class TestCreate:
         assert cli_helper.list_prjs() == sorted(["Kyle", "Sally"])
         assert cli_helper.list_prjs("Kyle") == []
 
-    # @mock.patch("VirtualEnvironment.is_installed")
-    # @mock.patch("VirtualEnvironment._execute")
     def test_create_kernel(self, monkeypatch, caplog, cli_helper: CLIHelper):
         def mockexecute(*args, **kwargs):
             logger.info(f"{args}")
@@ -206,9 +204,6 @@ class TestCreate:
                 "environments": {"Kyle": ["ipykernel"]},
             },
         )
-        # mock_install.return_value = True
-        # mock_execute.return_value = True
-
         monkeypatch.setattr(VirtualEnvironment, "_execute", mockexecute)
         monkeypatch.setattr(VirtualEnvironment, "is_installed", mockexecute)
         with caplog.at_level(logging.INFO):
