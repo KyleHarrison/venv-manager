@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 from unittest import mock
@@ -8,6 +9,8 @@ from click.testing import CliRunner
 from virtualenvapi.manage import VirtualEnvironment
 
 from venvman import cli
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture()
@@ -20,7 +23,11 @@ class CLIHelper:
     def __init__(self, tmp_path, base_cfg):
         self._tmp_path = tmp_path
         self._base_cfg = base_cfg
-        self.ctx = cli.VenvManager(self.cfg())
+        self._cfg_path = self._gen_config(base_cfg)
+
+    @property
+    def ctx(self):
+        return cli.VenvManager(self._cfg_path)
 
     def create_env_dirs(self):
         """Use when envs have not been created, create dirs so they can be init."""
@@ -35,15 +42,16 @@ class CLIHelper:
             return sorted(os.listdir(self.ctx.projs_dir / sub_dir))
         return sorted(os.listdir(self.ctx.projs_dir))
 
-    def _apply_base_cfg(self, **kw):
-        d = {}
-        d.update(self._base_cfg)
-        d.update(kw)
-        return d
+    def _update_cfg(self, cfg):
+        new_cfg = self._base_cfg
+        for k, v in cfg.items():
+            if k in self._base_cfg:
+                new_cfg[k] = v
+        return new_cfg
 
-    def cfg(self, config_name="cfg.yml", **kw):
+    def _gen_config(self, cfg, config_name="cfg.yml"):
         cfg_file = self._tmp_path / config_name
-        cfg_file.write_text(json.dumps(self._apply_base_cfg(**kw)))
+        cfg_file.write_text(json.dumps(self._update_cfg(cfg)))
         return str(cfg_file)
 
     def invoke(
@@ -52,12 +60,12 @@ class CLIHelper:
         exit_code=0,
         cfg=None,
     ):
-        if cfg is None:
-            cfg = {}
+        if cfg is not None:
+            self._cfg_path = self._gen_config(cfg)
         runner = CliRunner()
         result = runner.invoke(
             cli.venvman,
-            ["--cfg", self.cfg(**cfg)] + args,
+            ["--cfg", self._cfg_path] + args,
             catch_exceptions=False,
         )
         if result.exception is not None:
@@ -67,10 +75,14 @@ class CLIHelper:
 
 
 @pytest.fixture
-def cli_helper(tmp_path):
+def cli_helper(tmp_path: Path):
+    envs_dir = tmp_path / "envs"
+    envs_dir.mkdir(parents=True)
+    prjs_dir = tmp_path / "projs"
+    prjs_dir.mkdir(parents=True)
     base_cfg = {
-        "environments_directory": str(tmp_path / "envs"),
-        "projects_directory": str(tmp_path / "projs"),
+        "environments_directory": str(envs_dir),
+        "projects_directory": str(prjs_dir),
         "default_packages": ["numpy"],
         "environments": {"Kyle": ["pandas"], "Sally": ["requests"]},
     }
@@ -82,8 +94,8 @@ class TestVenvManager:
         config = cli.VenvManager(data_fixtures / "cfg.yml")
         assert config.default_packages == ["numpy"]
         assert config.envs_cfg == {"Kyle": ["pandas"], "Sally": ["requests"]}
-        assert config.envs_dir == Path("tests/test_data/envs")
-        assert config.projs_dir == Path("tests/test_data/projects")
+        assert config.envs_dir == Path("envs")
+        assert config.projs_dir == Path("projects")
 
 
 class TestHelp:
@@ -103,7 +115,7 @@ class TestHelp:
             "",
             "Commands:",
             "  clean    Remove envs and dirs missing from config.",
-            "  create   Create environments and directories.",
+            "  create   Create environments, directories and jupyter kernels.",
             "  install  Installs one or more packages in each environment.",
             "  upgrade  Upgrade one or more packages in each environment.",
         ]
@@ -181,12 +193,51 @@ class TestCreate:
         assert cli_helper.list_prjs() == sorted(["Kyle", "Sally"])
         assert cli_helper.list_prjs("Kyle") == []
 
+    def test_create_kernel(self, monkeypatch, caplog, cli_helper: CLIHelper):
+        def mockexecute(*args, **kwargs):
+            logger.info(f"{args}")
+            return True
+
+        cli_helper.invoke(
+            ["create", "envs"],
+            cfg={
+                "environments": {"Kyle": ["ipykernel"]},
+            },
+        )
+        monkeypatch.setattr(VirtualEnvironment, "_execute", mockexecute)
+        monkeypatch.setattr(VirtualEnvironment, "is_installed", mockexecute)
+        with caplog.at_level(logging.INFO):
+            output = cli_helper.invoke(
+                [
+                    "create",
+                    "kernels",
+                ],
+            )
+            kernel_command = caplog.record_tuples[-1][-1].split(",")
+            assert kernel_command[2:] == [
+                " '-m'",
+                " 'ipykernel'",
+                " 'install'",
+                " '--name=Kyle'])",
+            ]
+
+        assert output == [
+            "Creating jupyter kernel for Kyle",
+        ]
+
 
 class TestInstall:
     def test_install_pkg(self, cli_helper: CLIHelper):
-        cli_helper.create_env_dirs()
-        output = cli_helper.invoke(["install", "eli5"])
-        assert output == ["Installing ['eli5'] in Kyle", "Installing ['eli5'] in Sally"]
+        output = cli_helper.invoke(
+            ["install", "numpy"],
+            cfg={
+                "environments": {"Kyle": [], "Sally": []},
+            },
+        )
+        assert output == [
+            "Installing ['numpy'] in Kyle",
+            "Installing ['numpy'] in Sally",
+        ]
 
     def test_install_pkgs(self, cli_helper: CLIHelper):
         cli_helper.create_env_dirs()

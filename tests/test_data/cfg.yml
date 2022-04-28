@@ -1,5 +1,5 @@
-environments_directory: tests/test_data/envs
-projects_directory: tests/test_data/projects
+environments_directory: envs
+projects_directory: projects
 
 default_packages:
   - numpy
