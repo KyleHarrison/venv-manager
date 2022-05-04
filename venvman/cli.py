@@ -30,7 +30,9 @@ class VenvManager:
     def init_envs(self):
         envs = {}
         for env_name in self.envs_cfg:
-            envs[env_name] = VirtualEnvironment(str(self.envs_dir / env_name))
+            envs[env_name] = VirtualEnvironment(
+                str(self.envs_dir / env_name), python="python3"
+            )
         return envs
 
 
@@ -75,17 +77,23 @@ def create_envs(cfg: VenvManager):
 
 
 @create.command("kernels")
+@click.option(
+    "--sudo",
+    is_flag=False,
+    help="If True the command is executed in sudo.",
+)
 @pass_cfg
-def create_kernels(cfg: VenvManager):
+def create_kernels(cfg: VenvManager, sudo: bool):
     """Creates a jupyter kernel for each env."""
     for env_name, env in cfg.envs.items():
         click.echo(f"Creating jupyter kernel for {env_name}")
         if not env.is_installed("ipykernel"):
             env.install("ipykernel")
         python_bin = Path(cfg.envs[env_name].path) / "bin" / "python"
-        env._execute(
-            [str(python_bin), "-m", "ipykernel", "install", f"--name={env.name}"]
-        )
+        command = [str(python_bin), "-m", "ipykernel", "install", f"--name={env.name}"]
+        if sudo:
+            command.insert(0, command)
+        env._execute(command)
 
 
 @create.command("dirs")

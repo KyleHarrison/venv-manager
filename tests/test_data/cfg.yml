@@ -7,7 +7,6 @@ default_packages:
 environments:
   Kyle:
   - pandas
-
   Sally:
   - requests
   
