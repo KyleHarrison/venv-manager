@@ -234,7 +234,7 @@ class TestCreate:
         monkeypatch.setattr(VirtualEnvironment, "_execute", cli_helper.mockreturn)
         monkeypatch.setattr(VirtualEnvironment, "is_installed", cli_helper.mockreturn)
         with caplog.at_level(logging.INFO):
-            output = cli_helper.invoke(
+            cli_helper.invoke(
                 ["create", "kernels", "-s"],
             )
             sudo_command = caplog.record_tuples[-1][-1].split(",")[1]
