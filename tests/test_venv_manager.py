@@ -165,6 +165,26 @@ class TestCreate:
         assert cli_helper.list_prjs() == sorted(["Kyle", "Sally"])
         assert cli_helper.list_prjs("Kyle") == ["test_file.txt"]
 
+    def test_create_prj_exists(self, cli_helper: CLIHelper, data_fixtures):
+        cli_helper.invoke(
+            [
+                "create",
+                "dirs",
+                "--src",
+                str(data_fixtures / "test_copy_dir"),
+            ],
+        )
+        cli_helper.invoke(
+            [
+                "create",
+                "dirs",
+                "--src",
+                str(data_fixtures / "cfg.yml"),
+            ],
+        )
+        assert cli_helper.list_prjs() == sorted(["Kyle", "Sally"])
+        assert cli_helper.list_prjs("Kyle") == ["cfg.yml", "test_file.txt"]
+
     def test_create_prj_dir_copy_file(self, cli_helper, data_fixtures):
         output = cli_helper.invoke(
             [
