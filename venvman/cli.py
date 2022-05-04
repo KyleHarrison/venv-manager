@@ -79,7 +79,8 @@ def create_envs(cfg: VenvManager):
 @create.command("kernels")
 @click.option(
     "--sudo",
-    is_flag=False,
+    "-s",
+    is_flag=True,
     help="If True the command is executed in sudo.",
 )
 @pass_cfg
@@ -92,7 +93,7 @@ def create_kernels(cfg: VenvManager, sudo: bool):
         python_bin = Path(cfg.envs[env_name].path) / "bin" / "python"
         command = [str(python_bin), "-m", "ipykernel", "install", f"--name={env.name}"]
         if sudo:
-            command.insert(0, command)
+            command.insert(0, "sudo")
         env._execute(command)
 
 

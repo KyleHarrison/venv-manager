@@ -54,6 +54,10 @@ class CLIHelper:
         cfg_file.write_text(json.dumps(self._update_cfg(cfg)))
         return str(cfg_file)
 
+    def mockreturn(*args, **kwargs):
+        logger.info(f"{args}")
+        return True
+
     def invoke(
         self,
         args,
@@ -194,18 +198,14 @@ class TestCreate:
         assert cli_helper.list_prjs("Kyle") == []
 
     def test_create_kernel(self, monkeypatch, caplog, cli_helper: CLIHelper):
-        def mockexecute(*args, **kwargs):
-            logger.info(f"{args}")
-            return True
-
         cli_helper.invoke(
             ["create", "envs"],
             cfg={
                 "environments": {"Kyle": ["ipykernel"]},
             },
         )
-        monkeypatch.setattr(VirtualEnvironment, "_execute", mockexecute)
-        monkeypatch.setattr(VirtualEnvironment, "is_installed", mockexecute)
+        monkeypatch.setattr(VirtualEnvironment, "_execute", cli_helper.mockreturn)
+        monkeypatch.setattr(VirtualEnvironment, "is_installed", cli_helper.mockreturn)
         with caplog.at_level(logging.INFO):
             output = cli_helper.invoke(
                 [
@@ -220,10 +220,25 @@ class TestCreate:
                 " 'install'",
                 " '--name=Kyle'])",
             ]
+            assert output == [
+                "Creating jupyter kernel for Kyle",
+            ]
 
-        assert output == [
-            "Creating jupyter kernel for Kyle",
-        ]
+    def test_create_kernel_sudo(self, monkeypatch, caplog, cli_helper: CLIHelper):
+        cli_helper.invoke(
+            ["create", "envs"],
+            cfg={
+                "environments": {"Kyle": ["ipykernel"]},
+            },
+        )
+        monkeypatch.setattr(VirtualEnvironment, "_execute", cli_helper.mockreturn)
+        monkeypatch.setattr(VirtualEnvironment, "is_installed", cli_helper.mockreturn)
+        with caplog.at_level(logging.INFO):
+            output = cli_helper.invoke(
+                ["create", "kernels", "-s"],
+            )
+            sudo_command = caplog.record_tuples[-1][-1].split(",")[1]
+            assert sudo_command == " ['sudo'"
 
 
 class TestInstall:
