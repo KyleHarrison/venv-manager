@@ -110,18 +110,15 @@ def create_dirs(cfg: VenvManager, src: Path):
     'src'.
     """
     for env_name in cfg.envs_cfg:
-        click.echo(f"Creating dir for {env_name}")
         dest_subdir = Path(cfg.projs_dir / env_name)
-        if dest_subdir.is_dir():
-            click.echo(f"Dir already exists for {env_name}, skipping")
-        else:
-            dest_subdir.mkdir(parents=True)
-            if src is not None:
-                click.echo(f"Copying {src.name} to {dest_subdir.name}")
-                if src.is_dir():
-                    shutil.copytree(src, dest_subdir, dirs_exist_ok=True)
-                else:
-                    shutil.copyfile(src, dest_subdir / src.name)
+        click.echo(f"Creating dir for {env_name}")
+        dest_subdir.mkdir(parents=True, exist_ok=True)
+        if src is not None:
+            click.echo(f"Copying {src.name} to {dest_subdir.name}")
+            if src.is_dir():
+                shutil.copytree(src, dest_subdir, dirs_exist_ok=True)
+            else:
+                shutil.copyfile(src, dest_subdir / src.name)
 
 
 """ Install """
