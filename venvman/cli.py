@@ -4,7 +4,7 @@ from typing import Dict
 
 import click
 import yaml
-from virtualenvapi.manage import VirtualEnvironment
+from virtualenvapi.manage import VirtualEnvironment, PackageInstallationException
 
 from venvman import __version__ as venvman_version
 
@@ -13,16 +13,8 @@ class VenvManager:
     def __init__(self, cfg):
         with open(cfg, "r") as f:
             config = yaml.safe_load(f)
-        self.envs_dir = (
-            Path(config["environments_directory"])
-            if "environments_directory" in config
-            else Path(".")
-        )
-        self.projs_dir = (
-            Path(config["projects_directory"])
-            if "projects_directory" in config
-            else Path(".")
-        )
+        self.envs_dir = Path(config.get("environments_directory", "."))
+        self.projs_dir = Path(config.get("projects_directory", "."))
         self.default_packages = config.get("default_packages")
         self.envs_cfg = config.get("environments")
         self.envs = self.init_envs()
@@ -121,6 +113,29 @@ def create_dirs(cfg: VenvManager, src: Path):
                 shutil.copyfile(src, dest_subdir / src.name)
 
 
+@create.command("repos")
+@pass_cfg
+def create_repos(cfg: VenvManager):
+    """Clones as repo for each environment into the projects dir."""
+    for env_name, env in cfg.envs.items():
+        repo_path = Path(cfg.projs_dir) / Path(env_name)
+        if repo_path.is_dir():
+            click.echo(
+                click.style(
+                    f"Directory already exists {repo_path}, skipping.", fg="yellow"
+                )
+            )
+            continue
+        click.echo(f"Cloning repo for {repo_path}.")
+        command = [
+            "git",
+            "clone",
+            f"git@github.com:prodigyfinance/{env.name}.git",
+            f"{cfg.projs_dir}/{env_name}",
+        ]
+        env._execute(command)
+
+
 """ Install """
 
 
@@ -134,6 +149,41 @@ def install_pkgs(cfg: VenvManager, pkgs: str):
         click.echo(f"Installing {list(pkgs)} in {env_name}")
         for pkg in pkgs:
             env.install(pkg)
+
+
+@venvman.command("uninstall")
+@click.argument("pkgs", nargs=-1)
+@pass_cfg
+def uninstall_pkgs(cfg: VenvManager, pkgs: str):
+    """Installs one or more packages in each environment."""
+    for env_name in cfg.envs_cfg:
+        env = cfg.envs[env_name]
+        click.echo(f"Uninstalling {list(pkgs)} in {env_name}")
+        for pkg in pkgs:
+            env.uninstall(pkg)
+
+
+@venvman.command("install-source")
+@pass_cfg
+def install_source(cfg: VenvManager):
+    """Installs each project from source."""
+    for env_name, env in cfg.envs.items():
+        repo_path = Path(cfg.projs_dir) / Path(env_name)
+        if (repo_path / "setup.py").is_file():
+            click.echo(f"Installing project source for {env_name}")
+            try:
+                env.install(
+                    f"-e {repo_path}[dev]",
+                )
+            except PackageInstallationException:
+                click.echo("Package install error, try manually fix package issues.")
+                click.echo(f"Check {env._errorfile} for error logs.", err=True)
+        else:
+            click.echo(
+                click.style(
+                    f"Project {env_name} is not pip installable, skipping.", fg="yellow"
+                )
+            )
 
 
 """ Upgrade """

@@ -2,11 +2,8 @@ environments_directory: envs
 projects_directory: projects
 
 default_packages:
-  - numpy
-  
+
 environments:
   Kyle:
-  - pandas
   Sally:
-  - requests
   
