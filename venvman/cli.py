@@ -61,7 +61,9 @@ def create_envs(cfg: VenvManager):
     for env_name, pkgs in cfg.envs_cfg.items():
         click.echo(f"Creating env {env_name}")
         env = cfg.envs[env_name]
-        Path(env.path).mkdir(parents=True)
+        Path(env.path).mkdir(parents=True, exist_ok=True)
+        if pkgs is None:
+            pkgs = []
         for pkg in cfg.default_packages + pkgs:
             click.echo(f"Installing package {pkg}")
             env.install(pkg)
